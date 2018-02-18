@@ -12,6 +12,10 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 public abstract class Tank {
+    protected int team;
+    private int numbersOfTeams;
+    public static int teamCount = 0;
+
     protected TextureRegion textureBase;
     protected TextureRegion textureTurret;
     protected TextureRegion textureTrack;
@@ -33,9 +37,19 @@ public abstract class Tank {
     protected float fuel;
     protected float time;
     protected float reddish;
+    private float r;
+    private float g;
+    private float b;
+    private int i;
+
+    protected StringBuilder tmpStrBuilder = new StringBuilder();
 
     public boolean isMakeTurn() {
         return makeTurn;
+    }
+
+    public Vector2 getPosition() {
+        return position;
     }
 
     public void setMakeTurn(boolean makeTurn) {
@@ -60,6 +74,7 @@ public abstract class Tank {
     }
 
     public Tank(GameScreen game, Vector2 position) {
+        numbersOfTeams=game.numbersOfTeams;
         this.game = game;
         this.position = position;
         this.weaponPosition = new Vector2(position).add(0, 0);
@@ -73,12 +88,18 @@ public abstract class Tank {
         this.turretAngle = 0.0f;
         this.maxHp = 100;
         this.hp = this.maxHp;
-        this.hitArea = new Circle(new Vector2(0, 0), textureBase.getRegionWidth() * 0.4f);
+        this.hitArea = new Circle(position, textureBase.getRegionWidth() * 0.4f);
         this.power = 0.0f;
         this.maxPower = 1200.0f;
         this.speed = 100.0f;
         this.makeTurn = true;
         this.reddish = 0.0f;
+        this.team = teamCount;
+        teamCount++;
+        if (teamCount > numbersOfTeams) {
+            teamCount = 0;
+        }
+
     }
 
     public void render(SpriteBatch batch) {
@@ -98,22 +119,50 @@ public abstract class Tank {
         batch.draw(textureTurret, weaponPosition.x, weaponPosition.y + t, textureTurret.getRegionWidth() / 10, textureTurret.getRegionHeight() / 2, textureTurret.getRegionWidth(), textureTurret.getRegionHeight(), 1, 1, turretAngle);
         batch.draw(textureTrack, position.x + 4, position.y);
 
+        teamColor(team);
+        batch.setColor(r, g, b, 1);
         batch.draw(textureBase, position.x, position.y + textureTrack.getRegionHeight() / 3 + t);
         batch.setColor(1, 1, 1, 1);
     }
 
+    private void teamColor(int team){
+ if(team==0){
+     r=1;g=0;b=0;
+ }else if(team==1){
+     r=0;g=1;b=0;
+ }else if(team==2){
+     r=0;g=0;b=1;
+ }else if(team==3){
+     r=0.7f;g=0.7f;b=0;
+ }else if(team==4){
+     r=0;g=0.7f;b=0.7f;
+ }else if(team==5){
+     r=0.7f;g=0;b=0.7f;
+ }else if(team==6){
+     r=1;g=0;b=1;
+ }else if(team==7){
+     r=0;g=1;b=1;
+ }else if(team==8){
+     r=0;g=0;b=0;
+ }
+
+    }
+
+
     public void renderHUD(SpriteBatch batch, BitmapFont font) {
         //batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        batch.draw(hudBarBack, position.x + 2, position.y + 80, 80, 24);
-        batch.draw(hudBarHp, position.x + 2, position.y + 80, (int) (80 * (float) hp / maxHp), 24);
+        batch.draw(hudBarBack, position.x, position.y + 80, 80, 24);
+        batch.draw(hudBarHp, position.x + 2, position.y + 80, (int) (76 * (float) hp / maxHp), 24);
 
         //batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE);
         //batch.draw(hudBarHp, position.x + 2 + MathUtils.random(-reddish * 3, reddish * 3), position.y + 70 + MathUtils.random(-reddish * 3, reddish * 3), (int) (80 * (float) hp / maxHp), 24);
         //batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        font.draw(batch, "" + hp, position.x, position.y + 100, 85, 1, false);
+        tmpStrBuilder.setLength(0);
+        tmpStrBuilder.append(hp);
+        font.draw(batch, tmpStrBuilder, position.x, position.y + 100, 85, 1, false);
         if (power > 100.0f) {
-            batch.draw(hudBarBack, position.x + 2, position.y + 104, 80, 24);
-            batch.draw(hudBarPower, position.x + 2, position.y + 104, (int) (80 * power / maxPower), 24);
+            batch.draw(hudBarBack, position.x, position.y + 104, 80, 24);
+            batch.draw(hudBarPower, position.x + 2, position.y + 104, (int) (76 * power / maxPower), 24);
         }
     }
 
@@ -132,6 +181,9 @@ public abstract class Tank {
                 }
             }
             fuel -= dt;
+            for (int i = 0; i < textureBase.getRegionWidth(); i += 8) {
+                game.getParticleEmitter().setup(position.x + i, position.y, MathUtils.random(60, 120) * -n, MathUtils.random(0, 40), 0.25f, 2, 2, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.3f, 0.1f);
+            }
         }
     }
 
@@ -139,6 +191,7 @@ public abstract class Tank {
         if (!checkOnGround()) {
             position.y -= 100.0f * dt;
         }
+//        int i=1/0;
         if (reddish > 0.0f) {
             reddish -= dt;
         } else {
@@ -153,6 +206,7 @@ public abstract class Tank {
     public boolean takeDamage(int dmg) {
         hp -= dmg;
         reddish += 1.0f;
+        game.getInfoSystem().addMessage("-" + dmg, position.x + 20, position.y + 100, FlyingText.Colors.RED);
         if (hp <= 0) {
             return true;
         }
@@ -160,8 +214,8 @@ public abstract class Tank {
     }
 
     public boolean checkOnGround(float x, float y) {
-        for (int i = 0; i < textureBase.getRegionWidth(); i += 2) {
-            if (game.getMap().isGround(x + i, y)) {
+        for (int i = 10; i < textureBase.getRegionWidth() - 10; i += 2) {
+            if (game.getMap().isGround(x + i, y + 10)) {
                 return true;
             }
         }
